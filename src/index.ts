@@ -37,6 +37,7 @@ io.on('connection', socket => {
       color: initialColor,
       isConnected: true,
       tokens: createTokens(initialColor),
+      hitScore: 0, 
     };
     state.players.push(player);
     state.turn = initialColor;
@@ -65,6 +66,7 @@ io.on('connection', socket => {
       color,
       isConnected: true,
       tokens: createTokens(color),
+      hitScore: 0, 
     };
     state.players.push(player);
     sessionToRoom.set(newSession, roomId);
@@ -107,26 +109,33 @@ io.on('connection', socket => {
   });
 
   socket.on('game:move', ({ roomId, tokenId }) => {
-    const state = rooms.get(roomId);
-    if (!state || state.status !== 'playing') return;
-    try {
-      const movingColor = state.turn;
-      const result = applyMove(state, tokenId);
-      handleMove(state, tokenId);
+  const state = rooms.get(roomId);
+  if (!state || state.status !== 'playing') return;
+  try {
+    const movingColor = state.turn;
+    const result = applyMove(state, tokenId);
 
-      io.to(roomId).emit('game:tokenMoved', {
-        tokenId,
-        color: movingColor,
-        from: result.from,
-        to: result.to,
-        capture: result.capture,
-      });
-
-      io.to(roomId).emit('game:state', state);
-    } catch (e: any) {
-      socket.emit('error', { message: e.message });
+    // R7: capture → bump hit score (per captured token)
+    const currentPlayer = state.players.find(p => p.color === movingColor);
+    if (currentPlayer) {
+      currentPlayer.hitScore += result.capture.length;
     }
-  });
+
+    handleMove(state, tokenId);
+
+    io.to(roomId).emit('game:tokenMoved', {
+      tokenId,
+      color: movingColor,
+      from: result.from,
+      to: result.to,
+      capture: result.capture,   // now Capture[]
+    });
+
+    io.to(roomId).emit('game:state', state);
+  } catch (e: any) {
+    socket.emit('error', { message: e.message });
+  }
+});
 
   socket.on('disconnect', () => {
     // TODO reconnection

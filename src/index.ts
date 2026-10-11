@@ -5,9 +5,16 @@ import { createInitialState, createTokens, applyMove } from './gameEngine.js';
 import { handleRoll, handleMove, rollDiceValue } from './turnMachine.js';
 import type { GameState, PlayerColor } from './types.js';
 
-const httpServer = createServer();
+const PORT = Number(process.env.PORT) || 4000;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+const httpServer = createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('ludo socket server is running\n');
+});
+
 const io = new Server(httpServer, {
-  cors: { origin: 'http://localhost:3000', credentials: true },
+  cors: { origin: FRONTEND_URL, credentials: true },
 });
 
 const rooms = new Map<string, GameState>();
@@ -37,7 +44,7 @@ io.on('connection', socket => {
       color: initialColor,
       isConnected: true,
       tokens: createTokens(initialColor),
-      hitScore: 0, 
+      hitScore: 0,
     };
     state.players.push(player);
     state.turn = initialColor;
@@ -66,7 +73,7 @@ io.on('connection', socket => {
       color,
       isConnected: true,
       tokens: createTokens(color),
-      hitScore: 0, 
+      hitScore: 0,
     };
     state.players.push(player);
     sessionToRoom.set(newSession, roomId);
@@ -84,12 +91,9 @@ io.on('connection', socket => {
     io.to(roomId).emit('game:state', state);
   });
 
-  // ⬇⬇⬇ ONLY ONE game:roll handler — this is the new version ⬇⬇⬇
   socket.on('game:roll', ({ roomId }) => {
     const state = rooms.get(roomId);
-    if (!state || state.status !== 'playing') {
-      return;
-    }
+    if (!state || state.status !== 'playing') return;
     try {
       const value = rollDiceValue(state);
       io.to(roomId).emit('game:diceRolled', {
@@ -109,37 +113,38 @@ io.on('connection', socket => {
   });
 
   socket.on('game:move', ({ roomId, tokenId }) => {
-  const state = rooms.get(roomId);
-  if (!state || state.status !== 'playing') return;
-  try {
-    const movingColor = state.turn;
-    const result = applyMove(state, tokenId);
+    const state = rooms.get(roomId);
+    if (!state || state.status !== 'playing') return;
+    try {
+      const movingColor = state.turn;
+      const result = applyMove(state, tokenId);
 
-    // R7: capture → bump hit score (per captured token)
-    const currentPlayer = state.players.find(p => p.color === movingColor);
-    if (currentPlayer) {
-      currentPlayer.hitScore += result.capture.length;
+      const currentPlayer = state.players.find(p => p.color === movingColor);
+      if (currentPlayer) {
+        currentPlayer.hitScore += result.capture.length;
+      }
+
+      handleMove(state, tokenId);
+
+      io.to(roomId).emit('game:tokenMoved', {
+        tokenId,
+        color: movingColor,
+        from: result.from,
+        to: result.to,
+        capture: result.capture,
+      });
+
+      io.to(roomId).emit('game:state', state);
+    } catch (e: any) {
+      socket.emit('error', { message: e.message });
     }
-
-    handleMove(state, tokenId);
-
-    io.to(roomId).emit('game:tokenMoved', {
-      tokenId,
-      color: movingColor,
-      from: result.from,
-      to: result.to,
-      capture: result.capture,   // now Capture[]
-    });
-
-    io.to(roomId).emit('game:state', state);
-  } catch (e: any) {
-    socket.emit('error', { message: e.message });
-  }
-});
+  });
 
   socket.on('disconnect', () => {
     // TODO reconnection
   });
 });
 
-httpServer.listen(4000, () => console.log('Socket server on :4000'));
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`Socket server on :${PORT}`);
+});

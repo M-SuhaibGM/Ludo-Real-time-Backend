@@ -46,13 +46,15 @@ export function handleRoll(state: GameState, value: number): GameState {
   const legal = getLegalMoves(player, value);
 
   if (legal.length === 0) {
-    if (value === 6) return state; // reroll allowed
+    if (value === 6) {
+      state.dice = null; // six but no legal move: same player rolls again
+      return state;
+    }
     state.dice = null;
     advanceToNextActivePlayer(state);
   }
   return state;
 }
-
 export function handleMove(state: GameState, tokenId: string): GameState {
   const value = state.dice!;
   state.dice = null;

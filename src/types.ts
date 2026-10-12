@@ -13,6 +13,7 @@ export type Player = {
   isConnected: boolean;
   tokens: Token[];
   hitScore: number;   // ← NEW: accumulates captures, never decreases
+  isBot?: boolean;
 };
 
 export type GameState = {
@@ -27,7 +28,7 @@ export type GameState = {
 };
 
 export const START_OFFSET: Record<PlayerColor, number> = {
-  red: 0, green: 13, yellow: 26, blue: 39,
+  red: 0, green: 13, blue: 26, yellow: 39,
 };
 
 // Safe cells (star cells on your board, NOT including start cells)
@@ -35,3 +36,4 @@ export const SAFE_CELLS = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
 
 // Start cells = the colored entry cells. Track indices.
 export const START_CELL_INDICES = new Set([0, 13, 26, 39]);
+const ORDER: PlayerColor[] = ['red', 'green', 'blue', 'yellow'];

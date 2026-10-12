@@ -51,12 +51,10 @@ export function getLegalMoves(player: Player, dice: number): Token[] {
     // Exact roll to finish
     if (next > 56) return false;
 
-    // Home column gate: if at 50 (last track cell) and moving past it,
-    // require at least 1 hit on this player.
-    if (t.steps === 50 && next > 50 && player.hitScore < 1) return false;
+    // Home gate: with 0 hits, no token may move PAST step 50.
+    // It can still stop on 50 (or on any step before it).
+    if (next > 50 && player.hitScore < 1) return false;
 
-    // Defensive: a token already in the home column (51..55) is fine to move,
-    // but only further into home column (already covered by next > 56 check).
     return true;
   });
 }

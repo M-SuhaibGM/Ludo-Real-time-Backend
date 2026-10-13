@@ -55,7 +55,8 @@ export function handleRoll(state: GameState, value: number): GameState {
   }
   return state;
 }
-export function handleMove(state: GameState, tokenId: string): GameState {
+
+export function handleMove(state: GameState, tokenId: string, extraTurn = false): GameState {
   const value = state.dice!;
   state.dice = null;
 
@@ -81,13 +82,14 @@ export function handleMove(state: GameState, tokenId: string): GameState {
     return state;
   }
 
-  // If current player is a winner, they don't get another turn even on a 6
+  // A player who has just won gets no more turns, even on a 6 or a bonus
   if (state.winners.includes(currentColor)) {
     advanceToNextActivePlayer(state);
     return state;
   }
 
-  if (value === 6) return state; // same player rolls again
+  // Same player rolls again: after a 6, a capture or a token reaching the centre
+  if (value === 6 || extraTurn) return state;
   advanceToNextActivePlayer(state);
   return state;
 }

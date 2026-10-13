@@ -77,7 +77,9 @@ function doMove(roomId: string, state: GameState, tokenId: string) {
   const currentPlayer = state.players.find(p => p.color === movingColor);
   if (currentPlayer) currentPlayer.hitScore += result.capture.length;
 
-  handleMove(state, tokenId);
+  // Bonus roll: after a capture or after a token reaches the centre (a 6 also repeats, inside handleMove)
+  const bonusRoll = result.capture.length > 0 || result.to === 56;
+  handleMove(state, tokenId, bonusRoll);
 
   io.to(roomId).emit('game:tokenMoved', {
     tokenId,

@@ -112,9 +112,3 @@ export function applyMove(
   return { state, from, to, capture };
 }
 
-// export function checkWin(state: GameState): PlayerColor | null {
-//   for (const p of state.players) {
-//     if (p.tokens.every(t => t.steps === 56)) return p.color;
-//   }
-//   return null;
-// }
